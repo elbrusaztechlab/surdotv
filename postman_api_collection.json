@@ -1,0 +1,266 @@
+{
+	"info": {
+		"_postman_id": "16f0f030-3e80-46c7-bf2a-0028d21514b5",
+		"name": "SurdoTV API - Requests",
+		"description": "SurdoTV mobil API endpointleri (sadece request).\n\nBase URL (Local): http://localhost:8043\nBase URL (Production): https://api.surdotv.az\n\nAuth: Her istekte Api-Key header'ı gerekli.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "51807754",
+		"_collection_link": "https://elgiz-soltanov-178834.postman.co/workspace/surdotv~3239080d-d830-4b05-893d-d78d1ca033d7/collection/51807754-16f0f030-3e80-46c7-bf2a-0028d21514b5?action=share&source=collection_link&creator=51807754"
+	},
+	"item": [
+		{
+			"name": "GET /api/index - Homepage",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Api-Key",
+						"value": "{{apiKey}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/index",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"index"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET /api/sections - All Categories",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Api-Key",
+						"value": "{{apiKey}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/sections",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"sections"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET /api/sections/:id - Section Videos",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Api-Key",
+						"value": "{{apiKey}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/sections/8?page=1&limit=10",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"sections",
+						"8"
+					],
+					"query": [
+						{
+							"key": "page",
+							"value": "1",
+							"description": "Sayfa numarası (default: 1)"
+						},
+						{
+							"key": "limit",
+							"value": "10",
+							"description": "Sayfa başına içerik sayısı, max 15 (default: 10)"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET /api/content/:id - Content Detail",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Api-Key",
+						"value": "{{apiKey}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/content/95",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"content",
+						"95"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET /api/search - Search Videos",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Api-Key",
+						"value": "{{apiKey}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/search?keyword=mozalan&page=1&limit=10&section=8",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"search"
+					],
+					"query": [
+						{
+							"key": "keyword",
+							"value": "mozalan",
+							"description": "Aranacak kelime (zorunlu)"
+						},
+						{
+							"key": "page",
+							"value": "1",
+							"description": "Sayfa numarası (default: 1)"
+						},
+						{
+							"key": "limit",
+							"value": "10",
+							"description": "Sayfa başına içerik sayısı, max 15 (default: 10)"
+						},
+						{
+							"key": "section",
+							"value": "8",
+							"description": "Kategori ID ile filtreleme (opsiyonel, alt kategoriler dahil)"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET /api/recommended-movies",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Api-Key",
+						"value": "{{apiKey}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/recommended-movies",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"recommended-movies"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET /api/about",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Api-Key",
+						"value": "{{apiKey}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/about",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"about"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "POST /api/send-message",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Api-Key",
+						"value": "{{apiKey}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/x-www-form-urlencoded"
+					},
+					{
+						"key": "name",
+						"value": "Test User"
+					},
+					{
+						"key": "email",
+						"value": "test@example.com"
+					},
+					{
+						"key": "phone",
+						"value": "+994501234567"
+					},
+					{
+						"key": "city",
+						"value": "Bakı"
+					},
+					{
+						"key": "message",
+						"value": "Bu bir test mesajıdır."
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/send-message",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"send-message"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8043",
+			"type": "string",
+			"disabled": true
+		},
+		{
+			"key": "apiKey",
+			"value": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+			"type": "string"
+		},
+		{
+			"key": "baseUrl",
+			"value": "https://api.surdotv.az",
+			"type": "string"
+		}
+	]
+}
