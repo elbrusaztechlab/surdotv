@@ -46,10 +46,8 @@ class SurdoTvApp extends StatelessWidget {
         Provider<SearchService>(
           create: (context) => SearchService(context.read<ApiClient>()),
         ),
-        ChangeNotifierProxyProvider<CatalogViewModel, SearchViewModel>(
+        ChangeNotifierProvider<SearchViewModel>(
           create: (context) => SearchViewModel(context.read<SearchService>()),
-          update: (_, catalogVm, searchVm) =>
-              searchVm!..updateCatalog(catalogVm),
         ),
         Provider<AboutService>(
           create: (context) => AboutService(context.read<ApiClient>()),

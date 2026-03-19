@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'package:surdotv_app/features/catalog/viewmodels/catalog_viewmodel.dart';
 import 'package:surdotv_app/features/search/viewmodels/search_viewmodel.dart';
 import 'package:surdotv_app/widgets/common_widgets.dart';
 import 'package:surdotv_app/widgets/video_card.dart';
@@ -18,12 +17,14 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
+  final ScrollController _scrollController = ScrollController();
   Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
     _controller.addListener(_onQueryChanged);
+    _scrollController.addListener(_onScroll);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -32,11 +33,6 @@ class _SearchScreenState extends State<SearchScreen> {
       if (searchVm.recommendations.isEmpty &&
           !searchVm.isLoadingRecommendations) {
         searchVm.loadRecommendations();
-      }
-
-      final catalogVm = context.read<CatalogViewModel>();
-      if (catalogVm.categories.isEmpty && !catalogVm.viewState.isLoading) {
-        catalogVm.fetchCatalog();
       }
     });
   }
@@ -47,8 +43,29 @@ class _SearchScreenState extends State<SearchScreen> {
     _controller
       ..removeListener(_onQueryChanged)
       ..dispose();
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) {
+      return;
+    }
+
+    final position = _scrollController.position;
+    if (position.pixels >= position.maxScrollExtent - 220) {
+      context.read<SearchViewModel>().loadMore();
+    }
+  }
+
+  void _scrollToTop() {
+    if (!_scrollController.hasClients) {
+      return;
+    }
+    _scrollController.jumpTo(0);
   }
 
   void _onQueryChanged() {
@@ -59,11 +76,13 @@ class _SearchScreenState extends State<SearchScreen> {
     _debounce?.cancel();
 
     if (query.isEmpty) {
+      _scrollToTop();
       vm.clearResults();
       return;
     }
 
     if (query.length < 2) {
+      _scrollToTop();
       vm.clearResults();
       return;
     }
@@ -87,6 +106,7 @@ class _SearchScreenState extends State<SearchScreen> {
     }
 
     _focusNode.unfocus();
+    _scrollToTop();
     context.read<SearchViewModel>().search(query);
   }
 
@@ -171,39 +191,9 @@ class _SearchScreenState extends State<SearchScreen> {
       onRefresh: vm.retryLastSearch,
       child: ListView(
         key: const ValueKey('search-results'),
+        controller: _scrollController,
         padding: const EdgeInsets.only(bottom: 24),
         children: [
-          if (vm.isUsingLocalFallback)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .primary
-                      .withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.info_outline_rounded,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Server nəticələri müvəqqəti əlçatan deyil, lokal nəticələr göstərilir.',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
             child: Row(
@@ -213,7 +203,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const Spacer(),
-                if (vm.isSearching)
+                if (vm.isLoadingMore)
                   const SizedBox(
                     height: 18,
                     width: 18,
@@ -239,6 +229,28 @@ class _SearchScreenState extends State<SearchScreen> {
                   VideoCard(video: vm.results[index]),
             ),
           ),
+          if (vm.isLoadingMore)
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Center(
+                child: SizedBox(
+                  height: 24,
+                  width: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2.4),
+                ),
+              ),
+            ),
+          if (vm.loadMoreErrorMessage != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Center(
+                child: TextButton.icon(
+                  onPressed: vm.loadMore,
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('Daha cox yukle'),
+                ),
+              ),
+            ),
         ],
       ),
     );

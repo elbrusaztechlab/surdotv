@@ -1,15 +1,14 @@
 import 'package:flutter/foundation.dart';
 
+import 'package:surdotv_app/core/models/paginated_items.dart';
 import 'package:surdotv_app/core/utils/result.dart';
 import 'package:surdotv_app/features/catalog/models/video_item_model.dart';
-import 'package:surdotv_app/features/catalog/viewmodels/catalog_viewmodel.dart';
 import 'package:surdotv_app/features/search/services/search_service.dart';
 
 class SearchViewModel extends ChangeNotifier {
   SearchViewModel(this.service);
 
   final SearchService service;
-  CatalogViewModel? _catalogViewModel;
 
   List<String> _recommendations = const [];
   List<String> get recommendations => _recommendations;
@@ -23,8 +22,17 @@ class SearchViewModel extends ChangeNotifier {
   bool _isSearching = false;
   bool get isSearching => _isSearching;
 
+  bool _isLoadingMore = false;
+  bool get isLoadingMore => _isLoadingMore;
+
+  bool _hasMoreResults = false;
+  bool get hasMoreResults => _hasMoreResults;
+
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
+
+  String? _loadMoreErrorMessage;
+  String? get loadMoreErrorMessage => _loadMoreErrorMessage;
 
   String? _recommendationsErrorMessage;
   String? get recommendationsErrorMessage => _recommendationsErrorMessage;
@@ -32,12 +40,8 @@ class SearchViewModel extends ChangeNotifier {
   String _lastQuery = '';
   String get lastQuery => _lastQuery;
   int _activeRequestId = 0;
-  bool _isUsingLocalFallback = false;
-  bool get isUsingLocalFallback => _isUsingLocalFallback;
-
-  void updateCatalog(CatalogViewModel catalogViewModel) {
-    _catalogViewModel = catalogViewModel;
-  }
+  int _currentPage = 0;
+  static const int _pageSize = SearchService.defaultPageLimit;
 
   Future<void> loadRecommendations() async {
     _isLoadingRecommendations = true;
@@ -66,40 +70,83 @@ class SearchViewModel extends ChangeNotifier {
 
     final requestId = ++_activeRequestId;
     _isSearching = true;
+    _isLoadingMore = false;
     _errorMessage = null;
-    _isUsingLocalFallback = false;
+    _loadMoreErrorMessage = null;
+    _results = const [];
+    _currentPage = 0;
+    _hasMoreResults = false;
     notifyListeners();
 
-    final result = await service.search(normalizedQuery);
+    final result = await service.search(
+      normalizedQuery,
+      page: 1,
+      limit: _pageSize,
+    );
     if (requestId != _activeRequestId) {
       return;
     }
 
     switch (result) {
-      case Success<List<VideoItemModel>>():
-        _results = result.data;
-        _isUsingLocalFallback = false;
-      case Failure<List<VideoItemModel>>():
-        final fallbackResults = _searchLocally(normalizedQuery);
-        _results = fallbackResults;
-        if (fallbackResults.isEmpty) {
-          _isUsingLocalFallback = false;
-          _errorMessage = result.message;
-        } else {
-          _isUsingLocalFallback = true;
-        }
+      case Success<PaginatedItems<VideoItemModel>>():
+        _results = result.data.items;
+        _currentPage = result.data.page;
+        _hasMoreResults = result.data.hasMore;
+      case Failure<PaginatedItems<VideoItemModel>>():
+        _errorMessage = result.message;
     }
 
     _isSearching = false;
     notifyListeners();
   }
 
+  Future<void> loadMore() async {
+    if (_lastQuery.isEmpty ||
+        _isSearching ||
+        _isLoadingMore ||
+        !_hasMoreResults) {
+      return;
+    }
+
+    final requestId = _activeRequestId;
+    final nextPage = _currentPage + 1;
+    _isLoadingMore = true;
+    _loadMoreErrorMessage = null;
+    notifyListeners();
+
+    final result = await service.search(
+      _lastQuery,
+      page: nextPage,
+      limit: _pageSize,
+    );
+
+    if (requestId != _activeRequestId) {
+      return;
+    }
+
+    switch (result) {
+      case Success<PaginatedItems<VideoItemModel>>():
+        _results = _mergeUniqueVideos(_results, result.data.items);
+        _currentPage = result.data.page;
+        _hasMoreResults = result.data.hasMore;
+      case Failure<PaginatedItems<VideoItemModel>>():
+        _loadMoreErrorMessage = result.message;
+    }
+
+    _isLoadingMore = false;
+    notifyListeners();
+  }
+
   void clearResults() {
     _results = const [];
     _errorMessage = null;
+    _loadMoreErrorMessage = null;
     _lastQuery = '';
     _activeRequestId++;
-    _isUsingLocalFallback = false;
+    _isSearching = false;
+    _isLoadingMore = false;
+    _currentPage = 0;
+    _hasMoreResults = false;
     notifyListeners();
   }
 
@@ -108,23 +155,17 @@ class SearchViewModel extends ChangeNotifier {
     await search(_lastQuery);
   }
 
-  List<VideoItemModel> _searchLocally(String query) {
-    final normalizedQuery = query.trim().toLowerCase();
-    if (normalizedQuery.isEmpty) {
-      return const [];
+  List<VideoItemModel> _mergeUniqueVideos(
+    List<VideoItemModel> existing,
+    List<VideoItemModel> incoming,
+  ) {
+    final videosById = <String, VideoItemModel>{};
+    for (final video in existing) {
+      videosById.putIfAbsent(video.id, () => video);
     }
-
-    final source = _catalogViewModel?.allVideos ?? const <VideoItemModel>[];
-    return source.where((video) {
-      final haystacks = [
-        video.title,
-        video.ogTitle,
-        video.ogKeywords,
-        video.ogDescription,
-        video.plainDescription,
-      ].map((item) => item.toLowerCase());
-
-      return haystacks.any((item) => item.contains(normalizedQuery));
-    }).toList();
+    for (final video in incoming) {
+      videosById.putIfAbsent(video.id, () => video);
+    }
+    return videosById.values.toList();
   }
 }

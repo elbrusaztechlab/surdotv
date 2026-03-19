@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import 'package:surdotv_app/core/models/paginated_items.dart';
 import 'package:surdotv_app/core/utils/result.dart';
 import 'package:surdotv_app/core/utils/view_state.dart';
 import 'package:surdotv_app/features/catalog/models/category_model.dart';
@@ -9,10 +10,36 @@ import 'package:surdotv_app/features/catalog/services/catalog_service.dart';
 class CatalogViewModel extends ChangeNotifier {
   CatalogViewModel(this.service);
 
+  static const int _sectionPageSize = CatalogService.defaultSectionPageLimit;
+
   final CatalogService service;
 
   ViewState<List<CategoryModel>> _viewState = ViewState.loading();
   ViewState<List<CategoryModel>> get viewState => _viewState;
+
+  String _selectedSectionId = '';
+  String get selectedSectionId => _selectedSectionId;
+
+  List<VideoItemModel> _sectionVideos = const [];
+  List<VideoItemModel> get sectionVideos => _sectionVideos;
+
+  bool _isLoadingSectionVideos = false;
+  bool get isLoadingSectionVideos => _isLoadingSectionVideos;
+
+  bool _isLoadingMoreSectionVideos = false;
+  bool get isLoadingMoreSectionVideos => _isLoadingMoreSectionVideos;
+
+  bool _hasMoreSectionVideos = false;
+  bool get hasMoreSectionVideos => _hasMoreSectionVideos;
+
+  String? _sectionErrorMessage;
+  String? get sectionErrorMessage => _sectionErrorMessage;
+
+  String? _sectionLoadMoreErrorMessage;
+  String? get sectionLoadMoreErrorMessage => _sectionLoadMoreErrorMessage;
+
+  int _sectionPage = 0;
+  int _sectionRequestId = 0;
 
   List<CategoryModel> get categories => _viewState.valueOrNull ?? const [];
 
@@ -42,6 +69,107 @@ class CatalogViewModel extends ChangeNotifier {
     }
 
     notifyListeners();
+  }
+
+  Future<void> loadSectionVideos(
+    String sectionId, {
+    bool refresh = false,
+  }) async {
+    final normalizedSectionId = sectionId.trim();
+    if (normalizedSectionId.isEmpty) {
+      _selectedSectionId = '';
+      _sectionVideos = const [];
+      _sectionErrorMessage = null;
+      _sectionLoadMoreErrorMessage = null;
+      _sectionPage = 0;
+      _hasMoreSectionVideos = false;
+      _isLoadingSectionVideos = false;
+      _isLoadingMoreSectionVideos = false;
+      notifyListeners();
+      return;
+    }
+
+    if (!refresh &&
+        _selectedSectionId == normalizedSectionId &&
+        _sectionVideos.isNotEmpty) {
+      return;
+    }
+
+    final requestId = ++_sectionRequestId;
+    _selectedSectionId = normalizedSectionId;
+    _sectionVideos = const [];
+    _sectionErrorMessage = null;
+    _sectionLoadMoreErrorMessage = null;
+    _sectionPage = 0;
+    _hasMoreSectionVideos = false;
+    _isLoadingSectionVideos = true;
+    _isLoadingMoreSectionVideos = false;
+    notifyListeners();
+
+    final result = await service.fetchSectionPage(
+      normalizedSectionId,
+      page: 1,
+      limit: _sectionPageSize,
+    );
+
+    if (requestId != _sectionRequestId) {
+      return;
+    }
+
+    switch (result) {
+      case Success<PaginatedItems<VideoItemModel>>():
+        _sectionVideos = result.data.items;
+        _sectionPage = result.data.page;
+        _hasMoreSectionVideos = result.data.hasMore;
+      case Failure<PaginatedItems<VideoItemModel>>():
+        _sectionErrorMessage = result.message;
+    }
+
+    _isLoadingSectionVideos = false;
+    notifyListeners();
+  }
+
+  Future<void> loadMoreSectionVideos() async {
+    if (_selectedSectionId.isEmpty ||
+        _isLoadingSectionVideos ||
+        _isLoadingMoreSectionVideos ||
+        !_hasMoreSectionVideos) {
+      return;
+    }
+
+    final requestId = _sectionRequestId;
+    _isLoadingMoreSectionVideos = true;
+    _sectionLoadMoreErrorMessage = null;
+    notifyListeners();
+
+    final result = await service.fetchSectionPage(
+      _selectedSectionId,
+      page: _sectionPage + 1,
+      limit: _sectionPageSize,
+    );
+
+    if (requestId != _sectionRequestId) {
+      return;
+    }
+
+    switch (result) {
+      case Success<PaginatedItems<VideoItemModel>>():
+        _sectionVideos = _mergeUniqueVideos(_sectionVideos, result.data.items);
+        _sectionPage = result.data.page;
+        _hasMoreSectionVideos = result.data.hasMore;
+      case Failure<PaginatedItems<VideoItemModel>>():
+        _sectionLoadMoreErrorMessage = result.message;
+    }
+
+    _isLoadingMoreSectionVideos = false;
+    notifyListeners();
+  }
+
+  Future<void> refreshSelectedSectionVideos() async {
+    if (_selectedSectionId.isEmpty) {
+      return;
+    }
+    await loadSectionVideos(_selectedSectionId, refresh: true);
   }
 
   CategoryModel? categoryById(String id) {
@@ -97,5 +225,19 @@ class CatalogViewModel extends ChangeNotifier {
       }
     }
     return unique.values.toList();
+  }
+
+  List<VideoItemModel> _mergeUniqueVideos(
+    List<VideoItemModel> existing,
+    List<VideoItemModel> incoming,
+  ) {
+    final videosById = <String, VideoItemModel>{};
+    for (final video in existing) {
+      videosById.putIfAbsent(video.id, () => video);
+    }
+    for (final video in incoming) {
+      videosById.putIfAbsent(video.id, () => video);
+    }
+    return videosById.values.toList();
   }
 }

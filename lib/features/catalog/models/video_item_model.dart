@@ -63,7 +63,15 @@ class VideoItemModel {
 
   String get imageUrl => ApiConstants.resolveImageUrl(imagePath);
 
+  BunnyVideoSource? get bunnyVideoSource =>
+      BunnyVideoSource.tryParse(rawVideoUrl);
+
   String get playbackUrl {
+    final bunnySource = bunnyVideoSource;
+    if (bunnySource != null) {
+      return bunnySource.embedUrl;
+    }
+
     final url = rawVideoUrl.trim();
     final uri = Uri.tryParse(url);
     final isDirectUrl = uri != null &&
@@ -74,10 +82,69 @@ class VideoItemModel {
       return url;
     }
 
-    return ApiConstants.fallbackVideoUrl;
+    return '';
   }
 
   String get plainDescription => htmlToPlainText(descriptionHtml);
 
   String get shareText => '$title\n$playbackUrl';
+}
+
+class BunnyVideoSource {
+  const BunnyVideoSource({
+    required this.libraryId,
+    required this.videoId,
+  });
+
+  static BunnyVideoSource? tryParse(String rawValue) {
+    final trimmedValue = rawValue.trim();
+    if (trimmedValue.isEmpty) {
+      return null;
+    }
+
+    final uri = Uri.tryParse(trimmedValue);
+    if (uri != null && uri.hasScheme) {
+      final segments = uri.pathSegments
+          .where((segment) => segment.trim().isNotEmpty)
+          .toList();
+
+      final embedIndex = segments.indexOf('embed');
+      if (embedIndex != -1 && segments.length > embedIndex + 2) {
+        return BunnyVideoSource(
+          libraryId: segments[embedIndex + 1],
+          videoId: segments[embedIndex + 2],
+        );
+      }
+
+      final playIndex = segments.indexOf('play');
+      if (playIndex != -1 && segments.length > playIndex + 2) {
+        return BunnyVideoSource(
+          libraryId: segments[playIndex + 1],
+          videoId: segments[playIndex + 2],
+        );
+      }
+
+      return null;
+    }
+
+    final parts = trimmedValue
+        .split('/')
+        .where((part) => part.trim().isNotEmpty)
+        .toList();
+    if (parts.length < 2) {
+      return null;
+    }
+
+    return BunnyVideoSource(
+      libraryId: parts[0],
+      videoId: parts[1],
+    );
+  }
+
+  final String libraryId;
+  final String videoId;
+
+  String get path => '$libraryId/$videoId';
+
+  String get embedUrl => ApiConstants.buildBunnyEmbedUrl(path);
 }

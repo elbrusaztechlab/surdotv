@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:surdotv_app/features/catalog/models/category_model.dart';
-import 'package:surdotv_app/features/catalog/models/video_item_model.dart';
 import 'package:surdotv_app/features/catalog/viewmodels/catalog_viewmodel.dart';
 import 'package:surdotv_app/widgets/common_widgets.dart';
 import 'package:surdotv_app/widgets/paged_video_grid.dart';
@@ -24,7 +23,6 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   final ScrollController _scrollController = ScrollController();
   String _selectedCategoryId = '';
   String _selectedSubCategoryId = '';
-  int _visibleCount = 10;
   bool _showUpButton = false;
   bool _appliedInitialCategory = false;
 
@@ -65,9 +63,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     }
 
     if (position.pixels >= max - 80) {
-      setState(() {
-        _visibleCount += 10;
-      });
+      context.read<CatalogViewModel>().loadMoreSectionVideos();
     }
   }
 
@@ -75,19 +71,20 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     setState(() {
       _selectedCategoryId = categoryId;
       _selectedSubCategoryId = '';
-      _visibleCount = 10;
       _showUpButton = false;
     });
     if (_scrollController.hasClients) {
       _scrollController.jumpTo(0);
     }
+    context
+        .read<CatalogViewModel>()
+        .loadSectionVideos(categoryId, refresh: true);
   }
 
   void _clearSelection() {
     setState(() {
       _selectedCategoryId = '';
       _selectedSubCategoryId = '';
-      _visibleCount = 10;
       _showUpButton = false;
     });
     if (_scrollController.hasClients) {
@@ -95,17 +92,29 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     }
   }
 
-  List<VideoItemModel> _selectedVideos(CatalogViewModel vm) {
+  void _selectSubCategory(String categoryId) {
+    setState(() {
+      _selectedSubCategoryId = categoryId;
+      _showUpButton = false;
+    });
+    if (_scrollController.hasClients) {
+      _scrollController.jumpTo(0);
+    }
+    context
+        .read<CatalogViewModel>()
+        .loadSectionVideos(categoryId, refresh: true);
+  }
+
+  Future<void> _handleRefresh(CatalogViewModel vm) async {
     if (_selectedCategoryId.isEmpty) {
-      return const [];
+      await vm.fetchCatalog();
+      return;
     }
-    var videos = vm.videosForCategory(_selectedCategoryId);
-    if (_selectedSubCategoryId.isNotEmpty) {
-      videos = videos
-          .where((video) => video.categoryId == _selectedSubCategoryId)
-          .toList();
-    }
-    return videos;
+
+    final targetSectionId = _selectedSubCategoryId.isNotEmpty
+        ? _selectedSubCategoryId
+        : _selectedCategoryId;
+    await vm.loadSectionVideos(targetSectionId, refresh: true);
   }
 
   Widget _overview(CatalogViewModel vm) {
@@ -170,8 +179,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     }
 
     final subCategories = vm.childCategoriesOf(_selectedCategoryId);
-    final allVideos = _selectedVideos(vm);
-    final visible = allVideos.take(_visibleCount).toList();
+    final videos = vm.sectionVideos;
 
     return Stack(
       alignment: Alignment.bottomRight,
@@ -196,29 +204,31 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                   children: [
                     OutlinePillButton(
                       text: 'Hamısı',
-                      onPressed: () {
-                        setState(() {
-                          _selectedSubCategoryId = '';
-                          _visibleCount = 10;
-                        });
-                      },
+                      onPressed: () => _selectCategory(_selectedCategoryId),
                     ),
                     ...subCategories.map(
                       (subcategory) => OutlinePillButton(
                         text: subcategory.name,
-                        onPressed: () {
-                          setState(() {
-                            _selectedSubCategoryId = subcategory.id;
-                            _visibleCount = 10;
-                          });
-                        },
+                        onPressed: () => _selectSubCategory(subcategory.id),
                       ),
                     ),
                   ],
                 ),
               ),
             const SizedBox(height: 10),
-            if (visible.isEmpty)
+            if (vm.isLoadingSectionVideos && videos.isEmpty)
+              const LoadingView()
+            else if (vm.sectionErrorMessage != null && videos.isEmpty)
+              ErrorStateView(
+                message: vm.sectionErrorMessage!,
+                onRetry: () => vm.loadSectionVideos(
+                  _selectedSubCategoryId.isNotEmpty
+                      ? _selectedSubCategoryId
+                      : _selectedCategoryId,
+                  refresh: true,
+                ),
+              )
+            else if (videos.isEmpty)
               const EmptyStateView(message: 'Bu bölmədə video tapılmadı.')
             else
               Padding(
@@ -233,9 +243,31 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                     mainAxisSpacing: 10,
                     childAspectRatio: 100 / 80,
                   ),
-                  itemCount: visible.length,
+                  itemCount: videos.length,
                   itemBuilder: (context, index) =>
-                      VideoCard(video: visible[index]),
+                      VideoCard(video: videos[index]),
+                ),
+              ),
+            if (vm.isLoadingMoreSectionVideos)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: Center(
+                  child: SizedBox(
+                    height: 24,
+                    width: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2.4),
+                  ),
+                ),
+              ),
+            if (vm.sectionLoadMoreErrorMessage != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: Center(
+                  child: TextButton.icon(
+                    onPressed: vm.loadMoreSectionVideos,
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text('Daha cox yukle'),
+                  ),
                 ),
               ),
           ],
@@ -301,7 +333,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             onRetry: catalogVm.fetchCatalog,
           ),
           success: (_) => RefreshIndicator(
-            onRefresh: catalogVm.fetchCatalog,
+            onRefresh: () => _handleRefresh(catalogVm),
             child: _selectedCategoryId.isEmpty
                 ? _overview(catalogVm)
                 : _selectedCategoryView(catalogVm),

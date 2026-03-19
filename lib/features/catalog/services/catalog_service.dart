@@ -1,6 +1,7 @@
 import 'dart:collection';
 
 import 'package:surdotv_app/core/constants/api_constants.dart';
+import 'package:surdotv_app/core/models/paginated_items.dart';
 import 'package:surdotv_app/core/network/api_client.dart';
 import 'package:surdotv_app/core/network/api_exceptions.dart';
 import 'package:surdotv_app/core/utils/result.dart';
@@ -9,6 +10,8 @@ import 'package:surdotv_app/features/catalog/models/video_item_model.dart';
 
 class CatalogService {
   CatalogService(this.apiClient);
+
+  static const int defaultSectionPageLimit = 20;
 
   final ApiClient apiClient;
 
@@ -60,6 +63,34 @@ class CatalogService {
     }
   }
 
+  Future<Result<PaginatedItems<VideoItemModel>>> fetchSectionPage(
+    String categoryId, {
+    required int page,
+    int limit = defaultSectionPageLimit,
+  }) async {
+    try {
+      final json = await apiClient.get(
+        '${ApiConstants.endpointSections}/$categoryId',
+        queryParameters: {
+          'page': page,
+          'limit': limit,
+        },
+      ) as Map<String, dynamic>;
+
+      return Success(
+        _parseVideoPage(
+          json,
+          page: page,
+          limit: limit,
+        ),
+      );
+    } on ApiException catch (error) {
+      return Failure(error.userMessage, statusCode: error.statusCode);
+    } catch (_) {
+      return const Failure(kGenericErrorMessage);
+    }
+  }
+
   List<VideoItemModel> collectVideosRecursively({
     required List<CategoryModel> categories,
     required String categoryId,
@@ -103,12 +134,17 @@ class CatalogService {
       '${ApiConstants.endpointSections}/$categoryId',
       queryParameters: const {
         'page': 1,
-        'limit': 15,
+        'limit': defaultSectionPageLimit,
       },
     ) as Map<String, dynamic>;
 
-    final firstPageVideos = _parseVideoList(firstPage);
-    final totalPages = (firstPage['total_pages'] as num?)?.toInt() ?? 1;
+    final firstPageResult = _parseVideoPage(
+      firstPage,
+      page: 1,
+      limit: defaultSectionPageLimit,
+    );
+    final firstPageVideos = firstPageResult.items;
+    final totalPages = firstPageResult.totalPages;
 
     if (!fetchAllPages || totalPages <= 1) {
       return firstPageVideos;
@@ -120,10 +156,14 @@ class CatalogService {
           '${ApiConstants.endpointSections}/$categoryId',
           queryParameters: {
             'page': page,
-            'limit': 15,
+            'limit': defaultSectionPageLimit,
           },
         ) as Map<String, dynamic>;
-        return _parseVideoList(json);
+        return _parseVideoPage(
+          json,
+          page: page,
+          limit: defaultSectionPageLimit,
+        ).items;
       }),
     );
 
@@ -138,5 +178,33 @@ class CatalogService {
             .whereType<Map<String, dynamic>>())
         .map(VideoItemModel.fromJson)
         .toList();
+  }
+
+  PaginatedItems<VideoItemModel> _parseVideoPage(
+    Map<String, dynamic> json, {
+    required int page,
+    required int limit,
+  }) {
+    final currentPage = (json['page'] ?? json['current_page'] ?? page) is num
+        ? ((json['page'] ?? json['current_page'] ?? page) as num).toInt()
+        : page;
+    final hasServerPaging =
+        json['total_pages'] is num || json['last_page'] is num;
+    final totalPages =
+        (json['total_pages'] ?? json['last_page'] ?? currentPage) is num
+            ? ((json['total_pages'] ?? json['last_page'] ?? currentPage) as num)
+                .toInt()
+            : currentPage;
+    final items = _parseVideoList(json);
+    final hasMore =
+        hasServerPaging ? currentPage < totalPages : items.length >= limit;
+
+    return PaginatedItems(
+      items: items,
+      page: currentPage,
+      limit: limit,
+      totalPages: totalPages,
+      hasMore: hasMore,
+    );
   }
 }

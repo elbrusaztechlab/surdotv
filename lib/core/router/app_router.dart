@@ -115,7 +115,9 @@ class AppRouter {
         redirect: (context, state) =>
             state.extra is VideoItemModel ? null : AppRoutes.mainHome.path,
         builder: (context, state) {
-          return VideoPlayerScreen(video: state.extra! as VideoItemModel);
+          return BunnyEmbedPlayerScreen(
+            video: state.extra! as VideoItemModel,
+          );
         },
       ),
     ],

@@ -12,7 +12,7 @@ class ApiClient {
   final http.Client _client;
   final Duration timeout;
 
-  Map<String, String> get _defaultHeaders => const {
+  Map<String, String> get _defaultHeaders => {
         'Api-Key': ApiConstants.apiKey,
         'api_key': ApiConstants.apiKey,
       };

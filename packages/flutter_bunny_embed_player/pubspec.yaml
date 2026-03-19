@@ -1,0 +1,22 @@
+name: flutter_bunny_embed_player
+description: Standalone Bunny embed player package for Flutter apps.
+version: 1.0.0
+publish_to: 'none'
+
+environment:
+  sdk: ">=3.3.4 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  webview_flutter: ^4.13.1
+  webview_flutter_android: ^4.10.13
+  webview_flutter_wkwebview: ^3.24.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

@@ -27,16 +27,18 @@ dependencies:
 
   cupertino_icons: ^1.0.8
   cached_network_image: ^3.4.1
-  bottom_navy_bar: ^6.0.0
+  bottom_navy_bar: ^6.1.0
   carousel_slider: ^5.1.2
   flutter_native_splash: ^2.4.7
   flutter_svg: ^2.2.4
-  go_router: ^17.0.1
+  go_router: ^17.1.0
   http: ^1.6.0
   intl: ^0.20.2
   provider: ^6.1.5
-  share_plus: ^12.0.0
-  video_player: ^2.10.0
+  share_plus: ^12.0.1
+  flutter_dotenv: ^6.0.0
+  flutter_bunny_embed_player:
+    path: packages/flutter_bunny_embed_player
 
 flutter_native_splash:
   color: "#F0E8E8"
@@ -58,9 +60,12 @@ flutter_launcher_icons:
   image_path: "assets/images/app_icon512.png"
 
 flutter:
+  config:
+    enable-swift-package-manager: false
   uses-material-design: true
 
   assets:
+    - .env
     - assets/images/
 
   fonts:

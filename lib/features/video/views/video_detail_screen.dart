@@ -44,33 +44,13 @@ class _VideoDetailScreenState extends State<VideoDetailScreen> {
     final catalogVm = context.watch<CatalogViewModel>();
     final detailVm = context.watch<VideoDetailViewModel>();
 
-    final fallbackVideo = catalogVm.findVideoById(widget.videoId);
-
     return detailVm.viewState.when(
-      loading: () {
-        if (fallbackVideo == null) {
-          return Scaffold(
-            appBar: SurdoLogoAppBar(
-              backgroundColor: Theme.of(context).colorScheme.primary,
-            ),
-            body: const LoadingView(),
-          );
-        }
-        return _DetailBody(
-          key: ValueKey('fallback-${fallbackVideo.id}'),
-          primaryVideo: fallbackVideo,
-          similarVideos: catalogVm.similarVideos(fallbackVideo.id, limit: 8),
-          selectedIndex: _selectedIndex,
-          onSelectedIndexChanged: (index) {
-            setState(() {
-              _selectedIndex = index;
-            });
-          },
-          onGoNext: _goNext,
-          carouselController: _carouselController,
-          listScrollController: _listScrollController,
-        );
-      },
+      loading: () => Scaffold(
+        appBar: SurdoLogoAppBar(
+          backgroundColor: Theme.of(context).colorScheme.primary,
+        ),
+        body: const LoadingView(),
+      ),
       success: (video) => _DetailBody(
         key: ValueKey('loaded-${video.id}'),
         primaryVideo: video,
@@ -85,30 +65,15 @@ class _VideoDetailScreenState extends State<VideoDetailScreen> {
         carouselController: _carouselController,
         listScrollController: _listScrollController,
       ),
-      error: (message) {
-        if (fallbackVideo != null) {
-          return _DetailBody(
-            key: ValueKey('error-fallback-${fallbackVideo.id}'),
-            primaryVideo: fallbackVideo,
-            similarVideos: catalogVm.similarVideos(fallbackVideo.id, limit: 8),
-            selectedIndex: _selectedIndex,
-            onSelectedIndexChanged: (index) {
-              setState(() {
-                _selectedIndex = index;
-              });
-            },
-            onGoNext: _goNext,
-            carouselController: _carouselController,
-            listScrollController: _listScrollController,
-          );
-        }
-        return Scaffold(
-          appBar: SurdoLogoAppBar(
-            backgroundColor: Theme.of(context).colorScheme.primary,
-          ),
-          body: ErrorStateView(message: message),
-        );
-      },
+      error: (message) => Scaffold(
+        appBar: SurdoLogoAppBar(
+          backgroundColor: Theme.of(context).colorScheme.primary,
+        ),
+        body: ErrorStateView(
+          message: 'Video tapılmadı.',
+          onRetry: () => detailVm.fetchVideo(widget.videoId),
+        ),
+      ),
     );
   }
 }
