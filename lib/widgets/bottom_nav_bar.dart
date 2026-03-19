@@ -48,10 +48,16 @@ class AppBottomNavBar extends StatelessWidget {
     return BottomNavyBarItem(
       activeColor: Theme.of(context).colorScheme.primary,
       inactiveColor: Colors.black54,
-      icon: Icon(icon),
+      icon: Padding(
+        padding: const EdgeInsets.only(left: 4),
+        child: Icon(
+          icon,
+          size: 24,
+        ),
+      ),
       title: Text(
         title,
-        style: const TextStyle(fontSize: 11),
+        style: const TextStyle(fontSize: 12),
       ),
       textAlign: TextAlign.center,
     );

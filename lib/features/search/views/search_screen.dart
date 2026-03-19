@@ -343,8 +343,8 @@ class _SearchDiscover extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
             child: Wrap(
-              spacing: 10,
-              runSpacing: 10,
+              spacing: 8,
+              runSpacing: 0,
               children: recommendations
                   .map(
                     (item) => ActionChip(
