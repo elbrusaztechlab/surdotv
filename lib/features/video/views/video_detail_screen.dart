@@ -226,16 +226,15 @@ class _DetailBody extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 6),
-                Padding(
-                  padding: const EdgeInsets.all(10),
-                  child: Text(
-                    current.plainDescription.isEmpty
-                        ? 'Bu video üçün açıqlama yoxdur.'
-                        : current.plainDescription,
-                    style: Theme.of(context).textTheme.bodyLarge,
-                    textAlign: TextAlign.justify,
+                if (current.plainDescription.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      current.plainDescription,
+                      style: Theme.of(context).textTheme.bodyLarge,
+                      textAlign: TextAlign.justify,
+                    ),
                   ),
-                ),
               ],
             ),
           ),

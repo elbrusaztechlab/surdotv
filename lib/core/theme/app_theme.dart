@@ -18,7 +18,7 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
-      fontFamily: 'Helvetica',
+      fontFamily: 'Roboto',
       scaffoldBackgroundColor: Colors.white,
       primaryColor: primaryColor,
       splashColor: Colors.transparent,
