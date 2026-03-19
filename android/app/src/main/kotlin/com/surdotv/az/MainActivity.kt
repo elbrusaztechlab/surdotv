@@ -1,4 +1,4 @@
-package com.surdotv.surdotv_app
+package com.az.surdotv
 
 import io.flutter.embedding.android.FlutterActivity
 
