@@ -7,6 +7,7 @@ import 'package:surdotv_app/core/router/app_router.dart';
 import 'package:surdotv_app/core/theme/app_theme.dart';
 import 'package:surdotv_app/features/about/services/about_service.dart';
 import 'package:surdotv_app/features/about/viewmodels/about_viewmodel.dart';
+import 'package:surdotv_app/features/app_update/services/app_update_service.dart';
 import 'package:surdotv_app/features/catalog/services/catalog_service.dart';
 import 'package:surdotv_app/features/catalog/viewmodels/catalog_viewmodel.dart';
 import 'package:surdotv_app/features/contact/services/contact_service.dart';
@@ -30,6 +31,9 @@ class SurdoTvApp extends StatelessWidget {
         ),
         Provider<ApiClient>(
           create: (context) => ApiClient(context.read<http.Client>()),
+        ),
+        Provider<AppUpdateService>(
+          create: (context) => AppUpdateService(context.read<ApiClient>()),
         ),
         Provider<HomeService>(
           create: (context) => HomeService(context.read<ApiClient>()),

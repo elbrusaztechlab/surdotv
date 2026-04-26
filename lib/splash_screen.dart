@@ -4,9 +4,13 @@ import 'package:provider/provider.dart';
 
 import 'package:surdotv_app/core/router/route_constants.dart';
 import 'package:surdotv_app/features/about/viewmodels/about_viewmodel.dart';
+import 'package:surdotv_app/features/app_update/services/app_update_service.dart';
+import 'package:surdotv_app/features/app_update/services/app_versionarte_provider.dart';
+import 'package:surdotv_app/features/app_update/views/app_update_blocking_screen.dart';
 import 'package:surdotv_app/features/catalog/viewmodels/catalog_viewmodel.dart';
 import 'package:surdotv_app/features/home/viewmodels/home_viewmodel.dart';
 import 'package:surdotv_app/features/search/viewmodels/search_viewmodel.dart';
+import 'package:versionarte/versionarte.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -21,6 +25,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   late final AnimationController _controller;
   late final Animation<double> _opacity;
+  VersionarteResult? _blockingVersionResult;
 
   @override
   void initState() {
@@ -37,6 +42,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   Future<void> _bootstrap() async {
     _controller.forward();
+    final versionCheckFuture = _checkVersionStatusSafely();
 
     await Future.wait<void>([
       context.read<HomeViewModel>().fetchHome(),
@@ -47,7 +53,39 @@ class _SplashScreenState extends State<SplashScreen>
     ]);
 
     if (!mounted) return;
+
+    final versionResult = await versionCheckFuture;
+    if (!mounted) return;
+
+    if (versionResult != null && _shouldBlockNavigation(versionResult)) {
+      setState(() {
+        _blockingVersionResult = versionResult;
+      });
+      return;
+    }
+
     context.go(AppRoutes.mainHome.path);
+  }
+
+  Future<VersionarteResult> _checkVersionStatus() {
+    final provider = AppVersionarteProvider(context.read<AppUpdateService>());
+    return Versionarte.check(versionarteProvider: provider);
+  }
+
+  Future<VersionarteResult?> _checkVersionStatusSafely() async {
+    try {
+      return await _checkVersionStatus();
+    } catch (error, stackTrace) {
+      debugPrint('Version check failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      return null;
+    }
+  }
+
+  bool _shouldBlockNavigation(VersionarteResult result) {
+    return result.status == VersionarteStatus.forcedUpdate ||
+        result.status == VersionarteStatus.outdated ||
+        result.status == VersionarteStatus.inactive;
   }
 
   @override
@@ -58,6 +96,11 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    final blockingVersionResult = _blockingVersionResult;
+    if (blockingVersionResult != null) {
+      return AppUpdateBlockingScreen(result: blockingVersionResult);
+    }
+
     return ColoredBox(
       color: Theme.of(context).colorScheme.surfaceContainerLowest,
       child: FadeTransition(

@@ -17,6 +17,7 @@ class ApiConstants {
   static const String endpointRecommendedMovies = '/recommended-movies';
   static const String endpointSearch = '/search';
   static const String endpointSendMessage = '/send-message';
+  static const String endpointAppVersion = '/app-version';
 
   static Uri buildUrl(
     String endpoint, {

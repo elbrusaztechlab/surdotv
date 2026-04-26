@@ -1,0 +1,19 @@
+name: versionarte
+description: Lightweight local app version gate for Surdo TV.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ">=3.3.4 <4.0.0"
+  flutter: ">=3.3.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  package_info_plus: ^10.1.0
+  url_launcher: ^6.3.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
