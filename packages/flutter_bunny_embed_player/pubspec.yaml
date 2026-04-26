@@ -10,8 +10,8 @@ dependencies:
   flutter:
     sdk: flutter
   webview_flutter: ^4.13.1
-  webview_flutter_android: ^4.10.13
-  webview_flutter_wkwebview: ^3.24.0
+  webview_flutter_android: ^4.11.0
+  webview_flutter_wkwebview: ^3.24.5
 
 dev_dependencies:
   flutter_test:
