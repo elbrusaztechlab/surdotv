@@ -15,7 +15,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.az.surdotv"
+    namespace = "az.surdotv.twa"
     compileSdk = 36
     ndkVersion = "28.2.13676358"
 
@@ -29,8 +29,8 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.az.surdotv"
-        minSdk = 26
+        applicationId = "az.surdotv.twa"
+        minSdk = 24
         targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName

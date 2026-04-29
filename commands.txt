@@ -1,4 +1,4 @@
-flutter build ipa --build-name=1.0.5 --build-number=1
+flutter build ipa --build-name=1.0.6 --build-number=1
 
-flutter build appbundle --build-name=1.0.0 --build-number=2
+flutter build appbundle --build-name=1.0.1 --build-number=3
 
