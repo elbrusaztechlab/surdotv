@@ -25,10 +25,7 @@ class HomeService {
           category,
       ];
 
-      final sliderItems = ((json['sliderItems'] as List<dynamic>? ?? const [])
-              .whereType<Map<String, dynamic>>())
-          .map(VideoItemModel.fromJson)
-          .toList();
+      final sliderItems = VideoItemModel.parseList(json['sliderItems']);
 
       return Success(
         HomeDataModel(
@@ -46,10 +43,7 @@ class HomeService {
   CategoryModel? _mapFeaturedCategory(Map<String, dynamic>? json) {
     if (json == null) return null;
 
-    final videos = ((json['video_list'] as List<dynamic>? ?? const [])
-            .whereType<Map<String, dynamic>>())
-        .map(VideoItemModel.fromJson)
-        .toList();
+    final videos = VideoItemModel.parseList(json['video_list']);
 
     return CategoryModel.fromJson(json, videos: videos);
   }

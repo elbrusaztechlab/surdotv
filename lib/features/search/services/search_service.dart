@@ -8,7 +8,11 @@ import 'package:surdotv_app/features/catalog/models/video_item_model.dart';
 class SearchService {
   SearchService(this.apiClient);
 
-  static const int defaultPageLimit = 20;
+  // The server ignores `limit` and always returns 15 items per page.
+  static const int defaultPageLimit = 15;
+
+  /// Pages that turn out empty after filtering are skipped, up to this many.
+  static const int _maxEmptyPagesToSkip = 5;
 
   final ApiClient apiClient;
 
@@ -33,16 +37,30 @@ class SearchService {
     int limit = defaultPageLimit,
   }) async {
     try {
-      final json = await apiClient.get(
-        ApiConstants.endpointSearch,
-        queryParameters: {
-          'keyword': query,
-          'page': page,
-          'limit': limit,
-        },
-      ) as Map<String, dynamic>;
+      var currentPage = page;
+      PaginatedItems<VideoItemModel> result;
+      var skipped = 0;
+      while (true) {
+        final json = await apiClient.get(
+          ApiConstants.endpointSearch,
+          queryParameters: {
+            'keyword': query,
+            'page': currentPage,
+            'limit': limit,
+          },
+        ) as Map<String, dynamic>;
 
-      return Success(_parsePage(json, page: page, limit: limit));
+        result = _parsePage(json, page: currentPage, limit: limit);
+        if (result.items.isNotEmpty ||
+            !result.hasMore ||
+            skipped >= _maxEmptyPagesToSkip) {
+          break;
+        }
+        skipped++;
+        currentPage = result.page + 1;
+      }
+
+      return Success(result);
     } on ApiException catch (error) {
       return Failure(error.userMessage, statusCode: error.statusCode);
     } catch (_) {
@@ -60,10 +78,7 @@ class SearchService {
         json['items'] ??
         const []) as List<dynamic>;
 
-    final videos = rawList
-        .whereType<Map<String, dynamic>>()
-        .map(VideoItemModel.fromJson)
-        .toList();
+    final videos = VideoItemModel.parseList(rawList);
 
     final currentPage = (json['page'] ?? json['current_page'] ?? page) is num
         ? ((json['page'] ?? json['current_page'] ?? page) as num).toInt()

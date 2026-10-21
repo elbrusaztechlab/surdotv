@@ -11,7 +11,11 @@ import 'package:surdotv_app/features/catalog/models/video_item_model.dart';
 class CatalogService {
   CatalogService(this.apiClient);
 
-  static const int defaultSectionPageLimit = 20;
+  // The server ignores `limit` and always returns 15 items per page.
+  static const int defaultSectionPageLimit = 15;
+
+  /// Pages that turn out empty after filtering are skipped, up to this many.
+  static const int _maxEmptyPagesToSkip = 5;
 
   final ApiClient apiClient;
 
@@ -69,21 +73,33 @@ class CatalogService {
     int limit = defaultSectionPageLimit,
   }) async {
     try {
-      final json = await apiClient.get(
-        '${ApiConstants.endpointSections}/$categoryId',
-        queryParameters: {
-          'page': page,
-          'limit': limit,
-        },
-      ) as Map<String, dynamic>;
+      var currentPage = page;
+      PaginatedItems<VideoItemModel> result;
+      var skipped = 0;
+      while (true) {
+        final json = await apiClient.get(
+          '${ApiConstants.endpointSections}/$categoryId',
+          queryParameters: {
+            'page': currentPage,
+            'limit': limit,
+          },
+        ) as Map<String, dynamic>;
 
-      return Success(
-        _parseVideoPage(
+        result = _parseVideoPage(
           json,
-          page: page,
+          page: currentPage,
           limit: limit,
-        ),
-      );
+        );
+        if (result.items.isNotEmpty ||
+            !result.hasMore ||
+            skipped >= _maxEmptyPagesToSkip) {
+          break;
+        }
+        skipped++;
+        currentPage = result.page + 1;
+      }
+
+      return Success(result);
     } on ApiException catch (error) {
       return Failure(error.userMessage, statusCode: error.statusCode);
     } catch (_) {
@@ -174,10 +190,7 @@ class CatalogService {
   }
 
   List<VideoItemModel> _parseVideoList(Map<String, dynamic> json) {
-    return ((json['video_list'] as List<dynamic>? ?? const [])
-            .whereType<Map<String, dynamic>>())
-        .map(VideoItemModel.fromJson)
-        .toList();
+    return VideoItemModel.parseList(json['video_list']);
   }
 
   PaginatedItems<VideoItemModel> _parseVideoPage(

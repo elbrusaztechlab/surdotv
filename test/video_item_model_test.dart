@@ -31,16 +31,83 @@ void main() {
 
       expect(model.playbackUrl, '');
     });
+
+    test('prefers video_url2 over the Bunny path', () {
+      final model = _buildModel(
+        rawVideoUrl: '663712/e1ce2508-360b-4e99-9c7e-387584a272d5',
+        videoUrl2:
+            'https://video.eee.az/play/e1ce2508-360b-4e99-9c7e-387584a272d5',
+      );
+
+      expect(
+        model.playbackUrl,
+        'https://video.eee.az/play/e1ce2508-360b-4e99-9c7e-387584a272d5',
+      );
+    });
+  });
+
+  group('VideoItemModel.hasVideo', () {
+    test('is false when both URLs are empty', () {
+      expect(_buildModel(rawVideoUrl: '').hasVideo, isFalse);
+    });
+
+    test('is false when either URL ends with video-yoxdur', () {
+      expect(
+        _buildModel(
+          rawVideoUrl: '663712/abc',
+          videoUrl2: 'https://video.eee.az/play/video-yoxdur',
+        ).hasVideo,
+        isFalse,
+      );
+      expect(_buildModel(rawVideoUrl: 'video-yoxdur').hasVideo, isFalse);
+    });
+
+    test('parseList drops videos without a video', () {
+      final videos = VideoItemModel.parseList([
+        {'id': 1, 'video_url': '663712/abc', 'video_url2': ''},
+        {'id': 2, 'video_url': 'video-yoxdur', 'video_url2': 'video-yoxdur'},
+        {'id': 3, 'video_url': '', 'video_url2': ''},
+      ]);
+
+      expect(videos.map((video) => video.id), ['1']);
+    });
+  });
+
+  group('VideoItemModel.webPageUrl', () {
+    test('builds the surdotv.az page URL from category and slug', () {
+      final model = VideoItemModel.fromJson({
+        'id': 95,
+        'video_head': 'Mauqli 1-ci hissə ',
+        'url': 'mauqli-1-ci-hisse--95',
+        'category': {'id': 9, 'url': 'cizgi-filmleri/'},
+      });
+
+      expect(
+        model.webPageUrl,
+        'https://surdotv.az/bolmeler/cizgi-filmleri/mauqli-1-ci-hisse--95/',
+      );
+      expect(
+        model.shareText,
+        'Mauqli 1-ci hissə\n'
+        'https://surdotv.az/bolmeler/cizgi-filmleri/mauqli-1-ci-hisse--95/',
+      );
+    });
+
+    test('falls back to the site root without a category', () {
+      expect(_buildModel(rawVideoUrl: '').webPageUrl, 'https://surdotv.az/');
+    });
   });
 }
 
 VideoItemModel _buildModel({
   required String rawVideoUrl,
+  String videoUrl2 = '',
 }) {
   return VideoItemModel(
     id: '1',
     title: 'Sample',
     rawVideoUrl: rawVideoUrl,
+    videoUrl2: videoUrl2,
     descriptionHtml: '',
     slug: '',
     shortText: '',
@@ -54,5 +121,8 @@ VideoItemModel _buildModel({
     categoryId: '',
     categoryName: '',
     parentCategoryId: '',
+    categorySlug: '',
+    serialName: '',
+    serialEpisodes: const [],
   );
 }

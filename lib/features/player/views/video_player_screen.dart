@@ -18,6 +18,25 @@ class BunnyEmbedPlayerScreen extends StatefulWidget {
 class _BunnyEmbedPlayerScreenState extends State<BunnyEmbedPlayerScreen> {
   @override
   Widget build(BuildContext context) {
+    if (!widget.video.hasVideo) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        appBar: AppBar(
+          backgroundColor: Colors.black,
+          foregroundColor: Colors.white,
+          title: Text(widget.video.title),
+        ),
+        body: const Center(
+          child: Text(
+            'Video mövcud deyil.',
+            style: TextStyle(color: Colors.white70, fontSize: 16),
+          ),
+        ),
+      );
+    }
+
+    // `playbackUrl` prefers `video_url2` (video.eee.az/play/<uuid>). That page
+    // plays HLS from cdn.eee.az and falls back to the Bunny embed by itself.
     return BunnyEmbedPlayerPage(
       playerUrl: widget.video.playbackUrl,
       title: widget.video.title,

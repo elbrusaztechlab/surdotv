@@ -6,6 +6,7 @@ class VideoItemModel {
     required this.id,
     required this.title,
     required this.rawVideoUrl,
+    required this.videoUrl2,
     required this.descriptionHtml,
     required this.slug,
     required this.shortText,
@@ -19,15 +20,20 @@ class VideoItemModel {
     required this.categoryId,
     required this.categoryName,
     required this.parentCategoryId,
+    required this.categorySlug,
+    required this.serialName,
+    required this.serialEpisodes,
   });
 
   factory VideoItemModel.fromJson(Map<String, dynamic> json) {
     final category = json['category'] as Map<String, dynamic>?;
+    final serial = json['serial'] as Map<String, dynamic>?;
 
     return VideoItemModel(
       id: (json['id'] ?? '').toString(),
       title: (json['video_head'] ?? '').toString(),
       rawVideoUrl: (json['video_url'] ?? '').toString(),
+      videoUrl2: (json['video_url2'] ?? '').toString(),
       descriptionHtml: (json['video_about'] ?? '').toString(),
       slug: (json['url'] ?? '').toString(),
       shortText: (json['short_metn'] ?? '').toString(),
@@ -41,12 +47,28 @@ class VideoItemModel {
       categoryId: (category?['id'] ?? json['sub_id'] ?? '').toString(),
       categoryName: (category?['name'] ?? '').toString(),
       parentCategoryId: (category?['sub_id'] ?? '').toString(),
+      categorySlug: (category?['url'] ?? '').toString(),
+      serialName: (serial?['name'] ?? '').toString(),
+      serialEpisodes: parseList(json['serial_episodes']),
     );
   }
+
+  /// Parses a raw video list and drops entries that have no playable video.
+  static List<VideoItemModel> parseList(Object? rawList) {
+    return ((rawList as List<dynamic>? ?? const [])
+            .whereType<Map<String, dynamic>>())
+        .map(VideoItemModel.fromJson)
+        .where((video) => video.hasVideo)
+        .toList();
+  }
+
+  static const String _noVideoMarker = 'video-yoxdur';
+  static const String siteBaseUrl = 'https://surdotv.az/';
 
   final String id;
   final String title;
   final String rawVideoUrl;
+  final String videoUrl2;
   final String descriptionHtml;
   final String slug;
   final String shortText;
@@ -60,13 +82,30 @@ class VideoItemModel {
   final String categoryId;
   final String categoryName;
   final String parentCategoryId;
+  final String categorySlug;
+  final String serialName;
+  final List<VideoItemModel> serialEpisodes;
 
   String get imageUrl => ApiConstants.resolveImageUrl(imagePath);
 
   BunnyVideoSource? get bunnyVideoSource =>
       BunnyVideoSource.tryParse(rawVideoUrl);
 
+  bool get hasVideo {
+    final url1 = rawVideoUrl.trim();
+    final url2 = videoUrl2.trim();
+    if (url1.isEmpty && url2.isEmpty) return false;
+    return !url1.endsWith(_noVideoMarker) && !url2.endsWith(_noVideoMarker);
+  }
+
   String get playbackUrl {
+    final url2 = videoUrl2.trim();
+    final url2Uri = Uri.tryParse(url2);
+    if (url2Uri != null &&
+        (url2Uri.scheme == 'http' || url2Uri.scheme == 'https')) {
+      return url2;
+    }
+
     final bunnySource = bunnyVideoSource;
     if (bunnySource != null) {
       return bunnySource.embedUrl;
@@ -87,7 +126,15 @@ class VideoItemModel {
 
   String get plainDescription => htmlToPlainText(descriptionHtml);
 
-  String get shareText => '$title\n$playbackUrl';
+  /// Page on surdotv.az, e.g. https://surdotv.az/bolmeler/cizgi-filmleri/mauqli-1-ci-hisse--95/
+  String get webPageUrl {
+    final category = categorySlug.trim().replaceAll(RegExp(r'^/+|/+$'), '');
+    final page = slug.trim();
+    if (category.isEmpty || page.isEmpty) return siteBaseUrl;
+    return '${siteBaseUrl}bolmeler/$category/$page/';
+  }
+
+  String get shareText => '${title.trim()}\n$webPageUrl';
 }
 
 class BunnyVideoSource {
