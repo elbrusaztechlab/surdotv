@@ -160,6 +160,16 @@ class _DetailBody extends StatelessWidget {
                           ),
                           child: InkWell(
                             onTap: () {
+                              if (!item.hasVideo) {
+                                ScaffoldMessenger.of(context)
+                                  ..hideCurrentSnackBar()
+                                  ..showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Video mövcud deyil.'),
+                                    ),
+                                  );
+                                return;
+                              }
                               context.push(AppRoutes.videoPlayer.path,
                                   extra: item);
                             },
@@ -235,6 +245,9 @@ class _DetailBody extends StatelessWidget {
                       textAlign: TextAlign.justify,
                     ),
                   ),
+                if (current.id == primaryVideo.id &&
+                    primaryVideo.serialEpisodes.length > 1)
+                  _EpisodesSection(video: primaryVideo),
               ],
             ),
           ),
@@ -259,6 +272,89 @@ class _DetailBody extends StatelessWidget {
               ),
         ),
       ],
+    );
+  }
+}
+
+class _EpisodesSection extends StatelessWidget {
+  const _EpisodesSection({required this.video});
+
+  final VideoItemModel video;
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Digər hissələr',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+          const SizedBox(height: 10),
+          for (final episode in video.serialEpisodes)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: episode.id == video.id
+                    ? null
+                    : () => context.pushReplacement(
+                          '${AppRoutes.videoDetail.path}/${episode.id}',
+                        ),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 120,
+                      height: 68,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: AppNetworkImage(
+                          imageUrl: episode.imageUrl,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            episode.title.trim(),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontWeight: episode.id == video.id
+                                  ? FontWeight.w700
+                                  : FontWeight.w400,
+                              color: episode.id == video.id ? primary : null,
+                            ),
+                          ),
+                          if (episode.duration.trim().isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              episode.duration,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(color: Colors.black54),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
