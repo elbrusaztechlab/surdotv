@@ -4,7 +4,8 @@ class ApiConstants {
   ApiConstants._();
 
   static const String apiHost = 'api.surdotv.az';
-  static const String uploadsBaseUrl = 'https://surdotv.az/uploads/';
+  static const String siteBaseUrl = 'https://surdotv.az/';
+  static const String uploadsBaseUrl = '${siteBaseUrl}uploads/';
   static const String bunnyEmbedBaseUrl =
       'https://iframe.mediadelivery.net/embed';
 

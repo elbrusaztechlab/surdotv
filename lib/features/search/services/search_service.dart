@@ -8,7 +8,9 @@ import 'package:surdotv_app/features/catalog/models/video_item_model.dart';
 class SearchService {
   SearchService(this.apiClient);
 
-  static const int defaultPageLimit = 20;
+  // The API ignores `limit` and always returns 15 items per page.
+  static const int defaultPageLimit = 15;
+  static const int _maxEmptyPageSkips = 5;
 
   final ApiClient apiClient;
 
@@ -33,16 +35,27 @@ class SearchService {
     int limit = defaultPageLimit,
   }) async {
     try {
-      final json = await apiClient.get(
-        ApiConstants.endpointSearch,
-        queryParameters: {
-          'keyword': query,
-          'page': page,
-          'limit': limit,
-        },
-      ) as Map<String, dynamic>;
+      var requestedPage = page;
+      for (var attempt = 1;; attempt++) {
+        final json = await apiClient.get(
+          ApiConstants.endpointSearch,
+          queryParameters: {
+            'keyword': query,
+            'page': requestedPage,
+            'limit': limit,
+          },
+        ) as Map<String, dynamic>;
 
-      return Success(_parsePage(json, page: page, limit: limit));
+        final result = _parsePage(json, page: requestedPage, limit: limit);
+        // A page can end up empty once videos without a file are filtered
+        // out; skip it so infinite scroll does not stall.
+        if (result.items.isNotEmpty ||
+            !result.hasMore ||
+            attempt >= _maxEmptyPageSkips) {
+          return Success(result);
+        }
+        requestedPage = result.page + 1;
+      }
     } on ApiException catch (error) {
       return Failure(error.userMessage, statusCode: error.statusCode);
     } catch (_) {
@@ -55,15 +68,9 @@ class SearchService {
     required int page,
     required int limit,
   }) {
-    final rawList = (json['videos'] ??
-        json['video_list'] ??
-        json['items'] ??
-        const []) as List<dynamic>;
-
-    final videos = rawList
-        .whereType<Map<String, dynamic>>()
-        .map(VideoItemModel.fromJson)
-        .toList();
+    final videos = VideoItemModel.listFromJson(
+      json['videos'] ?? json['video_list'] ?? json['items'],
+    );
 
     final currentPage = (json['page'] ?? json['current_page'] ?? page) is num
         ? ((json['page'] ?? json['current_page'] ?? page) as num).toInt()

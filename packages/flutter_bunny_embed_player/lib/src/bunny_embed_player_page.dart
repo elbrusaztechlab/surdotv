@@ -127,14 +127,14 @@ class _BunnyEmbedPlayerPageState extends State<BunnyEmbedPlayerPage> {
     return uri;
   }
 
-  // Future<void> _reload() async {
-  //   if (!mounted || _isDisposed || _playerUri == null) return;
-  //   setState(() {
-  //     _errorMessage = null;
-  //     _loadingProgress = 0;
-  //   });
-  //   await _controller.loadRequest(_playerUri!);
-  // }
+  Future<void> _reload() async {
+    if (!mounted || _isDisposed || _playerUri == null) return;
+    setState(() {
+      _errorMessage = null;
+      _loadingProgress = 0;
+    });
+    await _controller.loadRequest(_playerUri!);
+  }
 
   Future<void> _handleClose() async {
     if (_isClosing) return;
@@ -263,18 +263,22 @@ class _BunnyEmbedPlayerPageState extends State<BunnyEmbedPlayerPage> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Video tapılmadı.',
+                _playerUri == null
+                    ? 'Video tapılmadı.'
+                    : 'Video yüklənmədi. İnternet bağlantısını yoxlayın.',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: Colors.white70,
                   fontSize: 14,
                 ),
               ),
-              // const SizedBox(height: 16),
-              // FilledButton(
-              //   onPressed: _reload,
-              //   child: const Text('Yenidən Yüklə'),
-              // ),
+              if (_playerUri != null) ...[
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: _reload,
+                  child: const Text('Yenidən yüklə'),
+                ),
+              ],
             ],
           ),
         ),

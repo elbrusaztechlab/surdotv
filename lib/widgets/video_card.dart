@@ -10,15 +10,20 @@ class VideoCard extends StatelessWidget {
   const VideoCard({
     super.key,
     required this.video,
+    this.onTap,
   });
 
   final VideoItemModel video;
+
+  /// Defaults to opening the video's detail page.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       borderRadius: BorderRadius.circular(LayoutConstants.cardRadius),
-      onTap: () => context.push('${AppRoutes.videoDetail.path}/${video.id}'),
+      onTap: onTap ??
+          () => context.push('${AppRoutes.videoDetail.path}/${video.id}'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

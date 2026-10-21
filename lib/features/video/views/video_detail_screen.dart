@@ -7,6 +7,7 @@ import 'package:surdotv_app/features/catalog/models/video_item_model.dart';
 import 'package:surdotv_app/features/catalog/viewmodels/catalog_viewmodel.dart';
 import 'package:surdotv_app/features/video/viewmodels/video_detail_viewmodel.dart';
 import 'package:surdotv_app/widgets/common_widgets.dart';
+import 'package:surdotv_app/widgets/video_card.dart';
 
 class VideoDetailScreen extends StatefulWidget {
   const VideoDetailScreen({
@@ -153,23 +154,37 @@ class _DetailBody extends StatelessWidget {
                         ),
                       ),
                       Center(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 1.5),
-                          ),
-                          child: InkWell(
-                            onTap: () {
-                              context.push(AppRoutes.videoPlayer.path,
-                                  extra: item);
-                            },
-                            child: const Icon(
-                              Icons.play_arrow,
-                              color: Colors.white,
-                              size: 52,
-                            ),
-                          ),
-                        ),
+                        child: item.hasVideo
+                            ? Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                      color: Colors.white, width: 1.5),
+                                ),
+                                child: InkWell(
+                                  onTap: () {
+                                    context.push(AppRoutes.videoPlayer.path,
+                                        extra: item);
+                                  },
+                                  child: const Icon(
+                                    Icons.play_arrow,
+                                    color: Colors.white,
+                                    size: 52,
+                                  ),
+                                ),
+                              )
+                            : Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.6),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: const Text(
+                                  'Video mövcud deyil',
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              ),
                       ),
                     ],
                   );
@@ -235,6 +250,8 @@ class _DetailBody extends StatelessWidget {
                       textAlign: TextAlign.justify,
                     ),
                   ),
+                if (current.id == primaryVideo.id)
+                  _SerialEpisodes(video: primaryVideo),
               ],
             ),
           ),
@@ -258,6 +275,58 @@ class _DetailBody extends StatelessWidget {
                 color: Colors.black54,
               ),
         ),
+      ],
+    );
+  }
+}
+
+class _SerialEpisodes extends StatelessWidget {
+  const _SerialEpisodes({required this.video});
+
+  final VideoItemModel video;
+
+  @override
+  Widget build(BuildContext context) {
+    final episodes =
+        video.serialEpisodes.where((item) => item.id != video.id).toList();
+    if (episodes.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          child: Text(
+            'Digər hissələr',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+        ),
+        SizedBox(
+          height: 170,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: episodes.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              final episode = episodes[index];
+              return SizedBox(
+                width: 180,
+                // The detail view model is shared, so replace this page
+                // instead of stacking another detail page on top of it.
+                child: VideoCard(
+                  video: episode,
+                  onTap: () => context.pushReplacement(
+                    '${AppRoutes.videoDetail.path}/${episode.id}',
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
       ],
     );
   }
