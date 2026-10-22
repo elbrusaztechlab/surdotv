@@ -1,5 +1,5 @@
-flutter build ipa --build-name=1.0.6 --build-number=1
+flutter build ipa --build-name=1.0.7 --build-number=1
 
-flutter build appbundle --build-name=1.0.1 --build-number=3
+flutter build appbundle --build-name=1.0.2 --build-number=6
 
 SURDOTV_API_KEY=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789
